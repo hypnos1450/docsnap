@@ -57,15 +57,38 @@ async function generateWithGemini(
       },
     };
 
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts: [textPart, imagePart] }],
-      generationConfig: {
-        responseMimeType: "application/json",
-        temperature: 0.2,
-      },
-    });
+    // Retry with exponential backoff for rate limit errors
+    let result;
+    let attempts = 0;
+    const maxAttempts = 3;
 
-    const responseText = result.response.text().trim().replace(/^```json\s*/i, "").replace(/\s*```$/i, "");
+    while (attempts < maxAttempts) {
+      try {
+        result = await model.generateContent({
+          contents: [{ role: "user", parts: [textPart, imagePart] }],
+          generationConfig: {
+            responseMimeType: "application/json",
+            temperature: 0.2,
+          },
+        });
+        break; // Success
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        attempts++;
+
+        // Check if it's a rate limit (429) or quota error
+        const isRateLimit = errorMessage.includes("429") || errorMessage.includes("Too Many Requests") || errorMessage.includes("quota");
+
+        if (!isRateLimit || attempts >= maxAttempts) {
+          throw err; // Rethrow non-rate-limit errors or after max retries
+        }
+
+        // Exponential backoff: 1s, 2s
+        await new Promise((r) => setTimeout(r, attempts * 1000));
+      }
+    }
+
+    const responseText = result!.response.text().trim().replace(/^```json\s*/i, "").replace(/\s*```$/i, "");
 
     if (responseText) {
       try {
@@ -116,13 +139,7 @@ export async function POST(request: NextRequest) {
       steps = await generateWithGemini(images);
       aiModel = GEMINI_MODEL;
     } catch (err) {
-      // For debugging: return the error so we can see what went wrong
-      const errorMessage = err instanceof Error ? err.message : String(err);
-      return NextResponse.json({
-        error: "Gemini failed",
-        detail: errorMessage,
-        envKeyPresent: !!process.env.GEMINI_API_KEY,
-      }, { status: 500 });
+      console.error("Gemini failed, using mock:", err);
       // Fallback mock data
       const mockTitles = [
         "Log in to your account",
