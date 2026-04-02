@@ -1,36 +1,48 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# DocSnap 📋
 
-## Getting Started
+Turn screenshots into step-by-step documentation with AI.
 
-First, run the development server:
+## Setup
 
 ```bash
+# Install
+npm install
+
+# Dev
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+
+# Build
+npm run build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Day 1 Status (April 2 — Project kickoff)
+- ✅ Next.js 14 + Tailwind + shadcn/ui initialized
+- ✅ Landing page with pricing
+- ✅ Upload page with drag-and-drop, reorder, preview
+- ✅ Generate/preview page skeleton
+- ✅ API route structure (mock output → real AI Day 3)
+- 🔄 Supabase integration (Day 2)
+- 🔄 Stripe payments (Day 5)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Tech Stack
+- Next.js 14 (App Router)
+- Tailwind CSS + shadcn/ui
+- Supabase (post-auth setup)
+- Claude Vision API (Day 3)
+- Stripe (Day 5)
+- Vercel deployment
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Structure
+```
+src/
+  app/                     # Next.js app router
+    page.tsx               # Landing page
+    app/page.tsx           # Upload page
+    generate/page.tsx      # Preview/generate page
+    api/generate/route.ts  # AI generation API
+  components/
+    landing/               # Landing page UI
+    upload/                # Upload interface
+    preview/               # Generated doc preview
+  lib/                     # Utilities
+```
