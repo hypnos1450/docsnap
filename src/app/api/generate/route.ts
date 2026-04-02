@@ -116,7 +116,13 @@ export async function POST(request: NextRequest) {
       steps = await generateWithGemini(images);
       aiModel = GEMINI_MODEL;
     } catch (err) {
-      console.error("Gemini failed, using mock:", err);
+      // For debugging: return the error so we can see what went wrong
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      return NextResponse.json({
+        error: "Gemini failed",
+        detail: errorMessage,
+        envKeyPresent: !!process.env.GEMINI_API_KEY,
+      }, { status: 500 });
       // Fallback mock data
       const mockTitles = [
         "Log in to your account",
