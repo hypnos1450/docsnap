@@ -81,6 +81,13 @@ export default function PreviewPage() {
     generateDocs();
   }, [generateDocs]);
 
+  // Persist steps to sessionStorage for the print page
+  useEffect(() => {
+    if (steps.length > 0) {
+      sessionStorage.setItem("docsnap_steps", JSON.stringify(steps));
+    }
+  }, [steps]);
+
   const copyMarkdown = () => {
     const md = steps
       .map(
@@ -91,6 +98,123 @@ export default function PreviewPage() {
       )
       .join("\n");
     navigator.clipboard.writeText(md);
+  };
+
+  const downloadHTML = () => {
+    const htmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DocSnap Documentation</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: linear-gradient(to bottom, #f8fafc, #fff);
+      min-height: 100vh;
+      padding: 40px 20px;
+      color: #1e293b;
+    }
+    .container { max-width: 800px; margin: 0 auto; }
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 32px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .header-icon { font-size: 36px; }
+    .header h1 { font-size: 28px; font-weight: 700; color: #0f172a; }
+    .step-card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 32px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .step-header {
+      background: #f8fafc;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .step-number {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: #eef2ff;
+      color: #4f46e5;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 14px;
+    }
+    .step-title { font-size: 18px; font-weight: 600; color: #1e293b; }
+    .step-body { padding: 20px; }
+    .step-description { color: #475569; line-height: 1.7; margin-bottom: 16px; }
+    .step-image { width: 100%; border-radius: 12px; border: 1px solid #e2e8f0; }
+    .annotations { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
+    .annotation {
+      display: inline-block;
+      padding: 4px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 9999px;
+      font-size: 13px;
+      color: #475569;
+    }
+    .tip {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 14px;
+      color: #92400e;
+    }
+    .tip-label { font-weight: 600; margin-right: 6px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <span class="header-icon">📋</span>
+      <h1>DocSnap Documentation</h1>
+    </div>
+    ${steps
+      .map(
+        (s) => `
+    <div class="step-card">
+      <div class="step-header">
+        <div class="step-number">${s.step}</div>
+        <div class="step-title">${s.title}</div>
+      </div>
+      <div class="step-body">
+        <p class="step-description">${s.description}</p>
+        <img src="${s.imageUrl}" alt="${s.title}" class="step-image" />
+        ${s.annotations.length > 0 ? `
+        <div class="annotations">
+          ${s.annotations.map((ann) => `<span class="annotation">${ann}</span>`).join("")}
+        </div>` : ""}
+        ${s.tip ? `<div class="tip"><span class="tip-label">💡 Tip:</span>${s.tip}</div>` : ""}
+      </div>
+    </div>`
+      )
+      .join("")}
+  </div>
+</body>
+</html>`;
+
+    const blob = new Blob([htmlContent], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "docsnap-documentation.html";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const openPrintView = () => {
+    window.open("/print", "_blank");
   };
 
   if (images.length === 0) {
@@ -173,6 +297,22 @@ export default function PreviewPage() {
                 className="text-sm"
               >
                 📋 Copy Markdown
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={downloadHTML}
+                className="text-sm"
+              >
+                🌐 Download HTML
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={openPrintView}
+                className="text-sm"
+              >
+                📄 Download PDF
               </Button>
             </div>
           </div>

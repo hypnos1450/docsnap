@@ -1,10 +1,112 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
 
-export default function LandingPage() {
+function SuccessToast() {
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setVisible(false), 5000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (!visible) return null;
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+    <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300">
+      <div className="bg-green-600 text-white px-6 py-4 rounded-xl shadow-xl flex items-center gap-3">
+        <span className="text-xl">🎉</span>
+        <div>
+          <p className="font-semibold">Pro plan activated!</p>
+          <p className="text-sm text-green-100">Welcome to DocSnap Pro</p>
+        </div>
+        <button onClick={() => setVisible(false)} className="ml-2 text-green-200 hover:text-white">
+          ×
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function CancelledToast() {
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setVisible(false), 4000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (!visible) return null;
+
+  return (
+    <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300">
+      <div className="bg-slate-800 text-white px-6 py-4 rounded-xl shadow-xl flex items-center gap-3">
+        <span className="text-xl">ℹ️</span>
+        <p className="text-sm">Checkout cancelled — no charge was made.</p>
+        <button onClick={() => setVisible(false)} className="ml-2 text-slate-400 hover:text-white">
+          ×
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function LandingContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [checkingAuth, setCheckingAuth] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [showCancelled, setShowCancelled] = useState(false);
+
+  useEffect(() => {
+    const stripeStatus = searchParams.get("stripe");
+    if (stripeStatus === "success") {
+      setShowSuccess(true);
+      router.replace("/");
+    } else if (stripeStatus === "cancelled") {
+      setShowCancelled(true);
+      router.replace("/");
+    }
+  }, [searchParams, router]);
+
+  const handleProClick = async () => {
+    setCheckingAuth(true);
+    try {
+      const { createClient } = await import("@supabase/supabase-js");
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+      const { data } = await supabase.auth.getUser();
+
+      if (!data.user) {
+        router.push("/auth?redirect=/");
+        return;
+      }
+
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: "pro" }),
+      });
+
+      if (!res.ok) throw new Error("Checkout failed");
+      const { url } = await res.json();
+      if (url) window.location.href = url;
+    } catch (err) {
+      console.error("Pro checkout error:", err);
+    } finally {
+      setCheckingAuth(false);
+    }
+  };
+
+  return (
+    <>
+      {showSuccess && <SuccessToast />}
+      {showCancelled && <CancelledToast />}
+
       {/* Nav */}
       <nav className="border-b border-slate-200 bg-white/80 backdrop-blur sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -137,7 +239,7 @@ export default function LandingPage() {
                 "Custom branding",
                 "Hosted documentation pages",
               ],
-              cta: "Start Pro trial",
+              cta: checkingAuth ? "Redirecting..." : "Start Pro trial",
               highlight: true,
             },
           ].map((plan) => (
@@ -161,16 +263,22 @@ export default function LandingPage() {
                   </li>
                 ))}
               </ul>
-              <Link
-                href="/app"
-                className={`block text-center py-3 px-6 rounded-xl font-semibold transition ${
-                  plan.highlight
-                    ? "bg-indigo-600 text-white hover:bg-indigo-700"
-                    : "bg-slate-100 text-slate-900 hover:bg-slate-200"
-                }`}
-              >
-                {plan.cta}
-              </Link>
+              {plan.highlight ? (
+                <button
+                  onClick={handleProClick}
+                  disabled={checkingAuth}
+                  className="w-full block text-center py-3 px-6 rounded-xl font-semibold transition bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60 cursor-pointer"
+                >
+                  {checkingAuth ? "Redirecting..." : "Start Pro trial"}
+                </button>
+              ) : (
+                <Link
+                  href="/app"
+                  className={`block text-center py-3 px-6 rounded-xl font-semibold transition bg-slate-100 text-slate-900 hover:bg-slate-200`}
+                >
+                  {plan.cta}
+                </Link>
+              )}
             </div>
           ))}
         </div>
@@ -187,6 +295,18 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
-    </div>
+    </>
+  );
+}
+
+export default function LandingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white flex items-center justify-center">
+        <div className="text-slate-400">Loading...</div>
+      </div>
+    }>
+      <LandingContent />
+    </Suspense>
   );
 }
