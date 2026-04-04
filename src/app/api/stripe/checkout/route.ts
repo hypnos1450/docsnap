@@ -8,10 +8,19 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(request: NextRequest) {
   try {
+    const authHeader = request.headers.get("authorization");
     const supabase = await createServerSupabaseClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+
+    // Use Authorization header token if provided, otherwise fall back to cookie-based auth
+    let user;
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.slice(7);
+      const { data, error } = await supabase.auth.getUser(token);
+      user = error ? null : data.user;
+    } else {
+      const { data } = await supabase.auth.getUser();
+      user = data.user;
+    }
 
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

@@ -81,17 +81,23 @@ function LandingContent() {
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
       );
-      const { data, error: authError } = await supabase.auth.getUser();
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
 
       if (authError) throw authError;
-      if (!data.user) {
+      if (!user) {
         router.push("/auth?redirect=/");
         return;
       }
 
+      // Get the current access token to pass to the API
+      const { data: { accessToken, expiresAt } } = await supabase.auth.getSession();
+
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${accessToken ?? ""}`,
+        },
         credentials: "include",
         body: JSON.stringify({ plan: "pro" }),
       });
