@@ -57,6 +57,7 @@ function LandingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [checkingAuth, setCheckingAuth] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
   const [showCancelled, setShowCancelled] = useState(false);
 
@@ -73,14 +74,16 @@ function LandingContent() {
 
   const handleProClick = async () => {
     setCheckingAuth(true);
+    setErrorMsg("");
     try {
       const { createClient } = await import("@supabase/supabase-js");
       const supabase = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
       );
-      const { data } = await supabase.auth.getUser();
+      const { data, error: authError } = await supabase.auth.getUser();
 
+      if (authError) throw authError;
       if (!data.user) {
         router.push("/auth?redirect=/");
         return;
@@ -89,13 +92,17 @@ function LandingContent() {
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ plan: "pro" }),
       });
 
-      if (!res.ok) throw new Error("Checkout failed");
-      const { url } = await res.json();
-      if (url) window.location.href = url;
-    } catch (err) {
+      const data2 = await res.json();
+      if (!res.ok) throw new Error(data2.error || "Checkout failed");
+      if (data2.url) window.location.href = data2.url;
+      else throw new Error("No checkout URL returned");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Something went wrong";
+      setErrorMsg(msg);
       console.error("Pro checkout error:", err);
     } finally {
       setCheckingAuth(false);
@@ -264,13 +271,20 @@ function LandingContent() {
                 ))}
               </ul>
               {plan.highlight ? (
-                <button
-                  onClick={handleProClick}
-                  disabled={checkingAuth}
-                  className="w-full block text-center py-3 px-6 rounded-xl font-semibold transition bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60 cursor-pointer"
-                >
-                  {checkingAuth ? "Redirecting..." : "Start Pro trial"}
-                </button>
+                <>
+                  <button
+                    onClick={handleProClick}
+                    disabled={checkingAuth}
+                    className="w-full block text-center py-3 px-6 rounded-xl font-semibold transition bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60 cursor-pointer"
+                  >
+                    {checkingAuth ? "Redirecting..." : "Start Pro trial"}
+                  </button>
+                  {errorMsg && (
+                    <p className="mt-3 text-sm text-red-600 text-center bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                      {errorMsg}
+                    </p>
+                  )}
+                </>
               ) : (
                 <Link
                   href="/app"
