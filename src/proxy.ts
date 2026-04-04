@@ -27,14 +27,7 @@ export async function proxy(request: NextRequest) {
     }
   );
 
-  // Debug: log cookies received and auth state
-  const cookies = request.cookies.getAll();
-  const sbCookies = cookies.filter(c => c.name.startsWith('sb-'));
-  console.log('[proxy] Cookies received:', sbCookies.map(c => c.name));
-  console.log('[proxy] Cookie names + first 10 chars of value:', sbCookies.map(c => `${c.name}=${c.value.slice(0,10)}...`));
 
-  const { data: { user }, error } = await supabase.auth.getUser();
-  console.log('[proxy] getUser() user:', user?.email ?? 'null', 'error:', error?.message ?? 'none');
 
   // Protect /dashboard — redirect to auth if not logged in
   if (!user && request.nextUrl.pathname.startsWith("/dashboard")) {
