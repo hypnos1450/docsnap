@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
           quantity: 1,
         },
       ],
-      success_url: `${origin}/dashboard?stripe=success`,
+      success_url: `${origin}/?stripe=success`,
       cancel_url: `${origin}/?stripe=cancelled`,
       metadata: {
         userId: user.id,
