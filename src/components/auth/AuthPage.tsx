@@ -3,8 +3,6 @@
 import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 
 function AuthForm() {
   const [email, setEmail] = useState("");
@@ -22,7 +20,8 @@ function AuthForm() {
     setError("");
 
     try {
-      const supabase = (await import("@supabase/supabase-js")).createClient(
+      const { createClient } = await import("@supabase/supabase-js");
+      const supabase = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
       );
@@ -41,12 +40,12 @@ function AuthForm() {
           password,
         });
         if (signInError) throw signInError;
+        // Force full page navigation to ensure cookies/headers are set
         window.location.href = redirectTo;
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Authentication failed";
       setError(msg);
-    } finally {
       setLoading(false);
     }
   };
@@ -86,13 +85,14 @@ function AuthForm() {
               <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1.5">
                 Email
               </label>
-              <Input
+              <input
                 id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 required
+                className="w-full h-10 px-3 py-2 rounded-lg border border-slate-200 bg-transparent text-base outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 placeholder:text-slate-400"
               />
             </div>
 
@@ -100,7 +100,7 @@ function AuthForm() {
               <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1.5">
                 Password
               </label>
-              <Input
+              <input
                 id="password"
                 type="password"
                 value={password}
@@ -108,23 +108,21 @@ function AuthForm() {
                 placeholder={isSignUp ? "Min 6 characters" : "••••••••"}
                 required
                 minLength={6}
+                className="w-full h-10 px-3 py-2 rounded-lg border border-slate-200 bg-transparent text-base outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 placeholder:text-slate-400"
               />
             </div>
 
-            <Button
+            <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-base font-semibold"
+              className="w-full h-12 rounded-lg text-base font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
-              {loading
-                ? "Loading..."
-                : isSignUp
-                  ? "Create account"
-                  : "Sign in"}
-            </Button>
+              {loading ? "Loading..." : isSignUp ? "Create account" : "Sign in"}
+            </button>
           </form>
 
           <button
+            type="button"
             onClick={() => {
               setIsSignUp(!isSignUp);
               setError("");
