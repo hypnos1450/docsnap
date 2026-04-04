@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createClient } from "@supabase/supabase-js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2025-03-31.basil",
 });
+
+// Service role client bypasses RLS — needed for webhook (no user context)
+function getServiceClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 export async function POST(request: NextRequest) {
   const body = await request.text();
@@ -33,10 +41,38 @@ export async function POST(request: NextRequest) {
     const plan = session.metadata?.plan;
 
     if (userId && plan === "pro") {
-      const supabase = await createServerSupabaseClient();
+      const supabase = getServiceClient();
+      const { error } = await supabase
+        .from("profiles")
+        .upsert({
+          id: userId,
+          plan: "pro",
+          stripe_customer_id: session.customer as string,
+        }, { onConflict: "id" });
+      if (error) {
+        console.error("Failed to update profile:", error);
+        return NextResponse.json({ error: "DB update failed" }, { status: 500 });
+      }
+    }
+  }
+
+  if (event.type === "customer.subscription.deleted") {
+    const subscription = event.data.object as Stripe.Subscription;
+    const customerId = subscription.customer as string;
+
+    // Look up the user by their Stripe customer ID in profiles
+    const supabase = getServiceClient();
+    const { data } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("stripe_customer_id", customerId)
+      .single();
+
+    if (data) {
       await supabase
         .from("profiles")
-        .upsert({ id: userId, plan: "pro" }, { onConflict: "id" });
+        .update({ plan: "free" })
+        .eq("id", data.id);
     }
   }
 

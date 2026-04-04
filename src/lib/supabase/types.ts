@@ -16,6 +16,7 @@ export interface Database {
           full_name: string | null
           avatar_url: string | null
           plan: 'free' | 'pro'
+          stripe_customer_id: string | null
           created_at: string
         }
         Insert: {
@@ -24,11 +25,13 @@ export interface Database {
           full_name?: string | null
           avatar_url?: string | null
           plan?: 'free' | 'pro'
+          stripe_customer_id?: string | null
         }
         Update: {
           full_name?: string | null
           avatar_url?: string | null
           plan?: 'free' | 'pro'
+          stripe_customer_id?: string | null
         }
       }
       documents: {
