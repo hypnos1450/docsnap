@@ -90,13 +90,13 @@ function LandingContent() {
       }
 
       // Get the current access token to pass to the API
-      const { data: { accessToken, expiresAt } } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
 
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${accessToken ?? ""}`,
+          "Authorization": `Bearer ${session?.access_token ?? ""}`,
         },
         credentials: "include",
         body: JSON.stringify({ plan: "pro" }),
