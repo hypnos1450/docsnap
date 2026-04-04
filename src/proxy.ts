@@ -27,7 +27,9 @@ export async function proxy(request: NextRequest) {
     }
   );
 
-
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   // Protect /dashboard — redirect to auth if not logged in
   if (!user && request.nextUrl.pathname.startsWith("/dashboard")) {
